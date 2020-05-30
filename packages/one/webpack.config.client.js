@@ -3,15 +3,29 @@ const path = require("path");
 const nodeExternals = require("webpack-node-externals");
 const StartServerPlugin = require("start-server-webpack-plugin");
 
+const PATH_DELIMITER = "[\\\\/]"; // match 2 antislashes or one slash
+
+const safePath = (module) => module.split(/[\\\/]/g).join(PATH_DELIMITER);
+
+const generateIncludes = (modules) => {
+  return [
+    new RegExp(`(${modules.map(safePath).join("|")})$`),
+    new RegExp(
+      `(${modules.map(safePath).join("|")})${PATH_DELIMITER}(?!.*node_modules)`
+    ),
+  ];
+};
+
+const transpileModules = ["@minimal/two"];
+
 module.exports = {
-  name: "server",
+  name: "client",
   resolve: {
     extensions: [".ts", ".tsx", ".js"],
-    modules: [
-      path.resolve(__dirname, "node_modules"),
-      path.resolve(__dirname, "../node_modules"),
-      "node_modules",
-    ],
+    alias: {
+      'react-dom': '@hot-loader/react-dom',
+    },
+    symlinks: false
   },
 
   // When importing a module whose path matches one of the following, just
@@ -19,12 +33,7 @@ module.exports = {
   // This is important because it allows us to avoid bundling all of our
   // dependencies, which allows browsers to cache those libraries between builds.
   mode: "development",
-  node: {
-    fs: "empty",
-    dns: "mock",
-    net: "mock",
-    tls: "mock",
-  },
+  target: "web",
   entry: {
     app: ["./src/frontend-entry-point.tsx"],
     vendor: ["react"],
@@ -49,18 +58,26 @@ module.exports = {
     rules: [
       {
         test: /\.ts(?:x?)$/u,
-        exclude: /node_modules/u,
+        include: generateIncludes(transpileModules),
         use: [
           {
             loader: "babel-loader",
-          },
-          {
-            loader: "ts-loader",
             options: {
-              transpileOnly: true,
-              experimentalWatchApi: true,
-            },
-          },
+              cacheDirectory: true,
+              babelrc: false,
+              presets: [
+                [
+                  "@babel/preset-env",
+                  { targets: { browsers: "last 2 versions" } } // or whatever your project requires
+                ],
+                "@babel/preset-typescript",
+                "@babel/preset-react"
+              ],
+              plugins: [
+                "react-hot-loader/babel"
+              ]
+            }
+          }
         ],
       },
       {
@@ -70,18 +87,6 @@ module.exports = {
       },
     ],
   },
-  externals: [
-    "module",
-    "pnpapi",
-    "fsevents",
-    nodeExternals({
-      modulesDir: path.resolve(__dirname, "../../node_modules"),
-    }),
-    "child_process",
-    "babel_loader",
-    "webpack",
-    "loader-runner",
-  ],
   plugins: [
     new webpack.EnvironmentPlugin([
       "NODE_ENV",

@@ -1,21 +1,10 @@
-import * as React from "react";
-import * as ReactDOM from "react-dom";
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
+import App from './components/App';
 
-const App: React.FC = () => (
-  <section>
-    <h1>Hello world</h1>
-  </section>
-);
 
 const renderApp = (): void => {
-  ReactDOM.hydrate(<App />, document.querySelector("#root"));
-
-  if (module.hot) {
-    console.log("Is hot");
-    module.hot.accept(() => {
-      console.log("Accepted");
-    });
-  }
+  ReactDOM.hydrate(<App />, document.querySelector('#root'));
 };
 
 export default renderApp;
